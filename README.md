@@ -9,6 +9,9 @@
 - Next.js app router with Tailwind
 - Prisma Postgress Database
 
+## PS
+- support deepseek
+
 ## Examples Demo generated using ReactAI
 
 - [Popup Modal](https://reactai.vasarai.net/share/_ajy9)
