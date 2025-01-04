@@ -3,12 +3,14 @@ import dedent from "dedent";
 import shadcnDocs from "@/utils/shadcn-docs";
 import { z } from "zod";
 
+const baseUrl = process.env.LLM_BASE_URL;
 const openai = new OpenAI({
   apiKey: process.env.LLM_API_KEY,
-  baseURL: process.env.LLM_BASE_URL,
+  baseURL: baseUrl,
 });
 
 export async function POST(req: Request) {
+
   const json = await req.json();
   const result = z
     .object({
@@ -29,9 +31,9 @@ export async function POST(req: Request) {
 
   const { model, messages, shadcn } = result.data;
   const systemPrompt = getSystemPrompt(shadcn);
-
+  
   const completionStream = await openai.chat.completions.create({
-    model,
+    model:baseUrl!.includes("deepseek")?"deepseek-chat" :model ,
     messages: [
       {
         role: "system",
