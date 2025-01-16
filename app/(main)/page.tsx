@@ -188,13 +188,11 @@ export default function Home() {
   return (
     <main className="mt-12 flex w-full flex-1 flex-col items-center px-4 text-center">
       <div className="py-4" >
-      <ProductHunt />
+      {/* <ProductHunt /> */}
       </div>
 
       <h1 className="md:text-6xl text-3xl font-regular tracking-tight mb-6 mt-6">
-        Create React Components
-        <br />
-        <span className="text-[#9AE65C]">Instantly</span> with AI for Free
+        Create React Components with AI
       </h1>
       
       <p className="md:text-xm text-sm text-muted-foreground mb-6">
@@ -225,8 +223,8 @@ export default function Home() {
 
       <div className="flex items-center justify-between w-full max-w-2xl px-1 py-4">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Model:</span>
-        <Select.Root
+        <span className="text-sm text-muted-foreground">Model : </span>
+        {/* <Select.Root
           name="model"
           disabled={loading}
           value={model}
@@ -263,7 +261,8 @@ export default function Home() {
               <Select.Arrow />
             </Select.Content>
           </Select.Portal>
-        </Select.Root>
+        </Select.Root> */}
+        <span> deepseek</span>
       </div>
       <div>
       <Button
