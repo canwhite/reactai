@@ -20,6 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Github } from "lucide-react";
 import Image from "next/image";
+import { data$ } from "@store/rxState"; // Importing setPrompt
+import { useWebSocket } from "ahooks";
+
 
 export default function Home() {
   let [status, setStatus] = useState<
@@ -46,63 +49,123 @@ export default function Home() {
 
   let loading = status === "creating" || status === "updating";
 
+  
+  const {
+    readyState,
+    sendMessage,
+    latestMessage,
+    reconnect,
+    disconnect,
+  } = useWebSocket("ws://localhost:8080", {
+    reconnect: true, // 开启自动重连
+    reconnectInterval: 3000, // 重连间隔时间（毫秒）
+    reconnectLimit: 10, // 最大重连次数
+    onOpen: () => {
+      toast.success("WebSocket connection established."); // Notify user on successful connection
+      console.log("WebSocket connected");
+    },
+    onClose: () => {
+      console.log("WebSocket disconnected");
+    },
+    onError: (error) => {
+      console.error("WebSocket error:", error);
+    },
+    onReconnect: (attempts) => {
+      console.log(`Reconnecting... (attempt ${attempts})`);
+    },
+  });
+
+  // 监听最新消息
+  useEffect(() => {
+    if (latestMessage) {
+      console.log("Received message:", latestMessage.data);
+      setPrompt(latestMessage.data);
+    }
+  }, [latestMessage, sendMessage]);
+
+  // New useEffect to log prompt changes
+  useEffect(() => {
+    console.log("--prompt--", prompt);
+    create();
+  }, [prompt]);
+
+  // 心跳检测：每隔 5 秒发送一次心跳消息，但是websocket不会回应
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (readyState === WebSocket.OPEN) {
+        sendMessage("heartbeat");
+        console.log("Sent heartbeat");
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [readyState, sendMessage]);
+
+
+  //分出一个create方法
+  const create = useCallback(async ()=>{
+    
+    if (status !== "initial") {
+      scrollTo({ delay: 0.5 });
+    }
+
+    if (status === "creating") return;
+
+    setStatus("creating");
+    setGeneratedCode("");
+
+    try {
+      const res = await fetch("/api/generateCode", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          shadcn,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Error: ${res.statusText}, ${errorText}`);
+      }
+
+      if (!res.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          setGeneratedCode((prev) => prev + chunk);
+        }
+      }
+
+      setMessages([{ role: "user", content: prompt }]);
+      setInitialAppConfig({ model, shadcn });
+      setStatus("created");
+
+
+    } catch (error) {
+      console.error("Error creating app:", error);
+      toast.error("An error occurred while creating the app.");
+      setStatus("initial");
+    }
+
+  },[prompt])
+
   const createApp = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
       e.preventDefault();
-  
-      if (status !== "initial") {
-        scrollTo({ delay: 0.5 });
-      }
-  
-      if (status === "creating") return;
-  
-      setStatus("creating");
-      setGeneratedCode("");
-  
-      try {
-        const res = await fetch("/api/generateCode", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            shadcn,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-  
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(`Error: ${res.statusText}, ${errorText}`);
-        }
-  
-        if (!res.body) {
-          throw new Error("No response body");
-        }
-  
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let done = false;
-  
-        while (!done) {
-          const { value, done: readerDone } = await reader.read();
-          done = readerDone;
-  
-          if (value) {
-            const chunk = decoder.decode(value, { stream: true });
-            setGeneratedCode((prev) => prev + chunk);
-          }
-        }
-  
-        setMessages([{ role: "user", content: prompt }]);
-        setInitialAppConfig({ model, shadcn });
-        setStatus("created");
-      } catch (error) {
-        console.error("Error creating app:", error);
-        toast.error("An error occurred while creating the app.");
-        setStatus("initial");
-      }
+      create();
     },
     [status, model, shadcn, prompt, scrollTo]
   );

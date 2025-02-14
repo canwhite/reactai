@@ -3,10 +3,10 @@ import dedent from "dedent";
 import { z } from "zod";
 
 
-const baseUrl =  process.env.LLM_BASE_URL;
+const my_model = process.env.MODEL;
 const openai = new OpenAI({
   apiKey: process.env.LLM_API_KEY,
-  baseURL: baseUrl,
+  baseURL: process.env.LLM_BASE_URL,
 });
 
 export async function POST(req: Request) {
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const systemPrompt = getSystemPrompt();
 
   const completionStream = await openai.chat.completions.create({
-    model: baseUrl!.includes("deepseek")?"deepseek-chat":model,
+    model: my_model,
     messages: [
       {
         role: "system",
@@ -105,5 +105,7 @@ function getSystemPrompt() {
     - Ensure the code is ready to be used in a Next.js project
   `);
 }
+
+
 
 export const runtime = "edge";
